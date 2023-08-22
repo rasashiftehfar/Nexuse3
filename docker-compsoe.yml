@@ -1,0 +1,56 @@
+version: '3.4'
+services:
+ nexus:
+     hostname:  nexus-devops
+     image: sonatype/nexus3:3.41.1
+     container_name: nexus3-3-41-1
+     volumes:
+       -  "/data/nexus:/nexus-data"
+       - "/data/nexus:/nexus-data/log"
+     expose:
+       - "8081"
+     ports:
+       - "8120-8190:8120-8190"
+     restart: always
+     deploy:
+       resources:
+         limits:
+           cpus: '1'
+           memory: '2g'
+     healthcheck:
+       test: ["CMD", "curl", "-f", "--insecure", "http://nexus:8081"]
+       interval: 30s
+       timeout: 10s
+       retries: 3
+       start_period: 1m
+     networks:
+       - nexus-net
+         #     extra_hosts:
+             #       - "nrp.fanapsoft.ir:10.60.110.23"
+
+ reverse-proxy:
+     hostname: nexus-reverse
+     image: nginx:devel-stable
+     container_name: nexus-reverse
+     volumes:
+       - "/data/nginx:/etc/nginx/conf.d"
+       - "/data/nginx:/var/log/nginx"
+     links:
+       - "nexus:nexus3-3-41-1"
+     ports:
+       - "80:80"
+       - "443:443"
+     restart: always
+     depends_on:
+       - nexus
+     deploy:
+       resources:
+         limits:
+           cpus: '1'
+           memory: '250M'
+     networks:
+       - nexus-net
+
+networks:
+   nexus-net:
+        driver:  bridge
